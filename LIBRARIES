@@ -1,0 +1,5 @@
+In this file is a list of libraries which are used by the Terra Game Engine.
+Their authors are thanked and credited for writing said libraries.
+
+SFML 2
+zlib 1.2.5
