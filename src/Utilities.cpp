@@ -3,17 +3,27 @@
 #include <map>
 #include "Utilities.hpp"
 
-std::map<std::string, sf::Image> ImageMap;
+std::map<std::string, sf::SoundBuffer> SoundMap;
+std::map<std::string, sf::Image> TextureMap;
+
+sf::SoundBuffer &terra::GetSound(std::string SoundName){
+	if (SoundMap.find(SoundName) == SoundMap.end()){
+		sf::SoundBuffer Temp;
+		if (!Temp.LoadFromFile(SoundName))
+			std::cerr << "Unable to load sound " << SoundName << '\n';
+		SoundMap.insert(std::pair<std::string, sf::SoundBuffer>(SoundName, Temp));
+	}
+	return SoundMap.find(SoundName)->second;
+}
 
 sf::Image &terra::GetTexture(std::string TextureName){
-	if (ImageMap.find(TextureName) == ImageMap.end()){
+	if (TextureMap.find(TextureName) == TextureMap.end()){
 		sf::Image Temp;
 		if (!Temp.LoadFromFile(TextureName))
 			std::cerr << "Unable to load texture " << TextureName << '\n';
-		Temp.SetSmooth(false);
-		ImageMap.insert(std::pair<std::string, sf::Image>(TextureName, Temp));
+		TextureMap.insert(std::pair<std::string, sf::Image>(TextureName, Temp));
 	}
-	return ImageMap.find(TextureName)->second;
+	return TextureMap.find(TextureName)->second;
 }
 
 bool terra::IsBigEndian(){

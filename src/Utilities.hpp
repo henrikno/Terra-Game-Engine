@@ -1,13 +1,22 @@
 #ifndef TERRA_UTILITIES_HPP
 #define TERRA_UTILITIES_HPP
 
+#include <SFML/Audio.hpp>
 #include <SFML/Graphics.hpp>
 #include <string>
 
 namespace terra{
 	/*!
+	 * \param SoundName The filename of the sound
+	 * \return A reference to the sound
+	 *
+	 * Loads a sound if it isn't already loaded, and returns it.
+	 */
+	sf::SoundBuffer &GetSound(std::string SoundName);
+
+	/*!
 	 * \param TextureName The filename of the texture
-	 * \return A reference to the image.
+	 * \return A reference to the image
 	 *
 	 * Loads a texture if it isn't already loaded, and returns it.
 	 */
