@@ -3,6 +3,8 @@
 #include <map>
 #include "Utilities.hpp"
 
+std::string CurrentMusic;
+std::map<std::string, sf::Music> MusicMap;
 std::map<std::string, sf::SoundBuffer> SoundMap;
 std::map<std::string, sf::Image> TextureMap;
 
@@ -75,6 +77,36 @@ bool terra::IsColliding(sf::Shape A, sf::Shape B){
 			return false;
 	}
 	return true;
+}
+
+void terra::PauseMusic(){
+	if (CurrentMusic.size())
+		MusicMap.find(CurrentMusic)->second.Pause();
+	CurrentMusic = '';
+}
+
+void terra::PlayMusic(std::string MusicName, bool Loop, bool Pause){
+	if (Pause)
+		terra::PauseMusic();
+	else
+		terra::StopMusic();
+	if (MusicMap.find(MusicName) == MusicMap.end()){
+		sf::Music Temp;
+		if (!Temp.OpenFromFile(MusicName)){
+			std::cerr << "Unable to load music " << MusicName << '\n';
+			return;
+		}
+		MusicMap.insert(std::pair<std::string, sf::Music>(MusicName, Temp));
+	}
+	MusicMap.find(MusicName)->second.SetLoop(Loop);
+	MusicMap.find(MusicName)->second.Play();
+	CurrentMusic = MusicName;
+}
+
+void terra::StopMusic(){
+	if (CurrentMusic.size())
+		MusicMap.find(CurrentMusic)->second.Stop();
+	CurrentMusic = '';
 }
 
 void terra::SwapEndianness(char *Bytes, unsigned long NumBytes){
