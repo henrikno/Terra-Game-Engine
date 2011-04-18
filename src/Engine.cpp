@@ -100,7 +100,7 @@ int terra::Engine::Main(){
 		if (NewLevel)
 			PrepareLevel();
 		sf::Event Event;
-		while (GameWindow.GetEvent(Event)){
+		while (GameWindow.PollEvent(Event)){
 			for (auto i = ObjectList.begin(); i != ObjectList.end(); ++i)
 				i->second->OnEvent(Event);
 			if (Event.Type == sf::Event::Closed)
