@@ -1,5 +1,4 @@
 #include <iostream>
-#include "Config.hpp"
 #include "Engine.hpp"
 
 terra::Engine &terra::Engine::Get(){

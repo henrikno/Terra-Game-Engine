@@ -1,29 +1,30 @@
 #include <cstdint>
 #include <iostream>
 #include <map>
+#include <memory>
 #include "Utilities.hpp"
 
 std::string CurrentMusic;
-std::map<std::string, sf::Music> MusicMap;
-std::map<std::string, sf::SoundBuffer> SoundMap;
-std::map<std::string, sf::Image> TextureMap;
+std::map<std::string, std::shared_ptr<sf::Music>> MusicMap;
+std::map<std::string, std::shared_ptr<sf::SoundBuffer>> SoundMap;
+std::map<std::string, std::shared_ptr<sf::Image>> TextureMap;
 
-sf::SoundBuffer &terra::GetSound(std::string SoundName){
+std::shared_ptr<sf::SoundBuffer> terra::GetSound(std::string SoundName){
 	if (SoundMap.find(SoundName) == SoundMap.end()){
-		sf::SoundBuffer Temp;
-		if (!Temp.LoadFromFile(SoundName))
+		std::shared_ptr<sf::SoundBuffer> Temp(new sf::SoundBuffer);
+		if (!Temp->LoadFromFile(SoundName))
 			std::cerr << "Unable to load sound " << SoundName << '\n';
-		SoundMap.insert(std::pair<std::string, sf::SoundBuffer>(SoundName, Temp));
+		SoundMap.insert(std::pair<std::string, std::shared_ptr<sf::SoundBuffer>>(SoundName, Temp));
 	}
 	return SoundMap.find(SoundName)->second;
 }
 
-sf::Image &terra::GetTexture(std::string TextureName){
+std::shared_ptr<sf::Image> terra::GetTexture(std::string TextureName){
 	if (TextureMap.find(TextureName) == TextureMap.end()){
-		sf::Image Temp;
-		if (!Temp.LoadFromFile(TextureName))
+		std::shared_ptr<sf::Image> Temp(new sf::Image);
+		if (!Temp->LoadFromFile(TextureName))
 			std::cerr << "Unable to load texture " << TextureName << '\n';
-		TextureMap.insert(std::pair<std::string, sf::Image>(TextureName, Temp));
+		TextureMap.insert(std::pair<std::string, std::shared_ptr<sf::Image>>(TextureName, Temp));
 	}
 	return TextureMap.find(TextureName)->second;
 }
@@ -81,8 +82,8 @@ bool terra::IsColliding(sf::Shape A, sf::Shape B){
 
 void terra::PauseMusic(){
 	if (CurrentMusic.size())
-		MusicMap.find(CurrentMusic)->second.Pause();
-	CurrentMusic = '';
+		MusicMap.find(CurrentMusic)->second->Pause();
+	CurrentMusic = "";
 }
 
 void terra::PlayMusic(std::string MusicName, bool Loop, bool Pause){
@@ -91,22 +92,22 @@ void terra::PlayMusic(std::string MusicName, bool Loop, bool Pause){
 	else
 		terra::StopMusic();
 	if (MusicMap.find(MusicName) == MusicMap.end()){
-		sf::Music Temp;
-		if (!Temp.OpenFromFile(MusicName)){
+		std::shared_ptr<sf::Music> Temp(new sf::Music);
+		if (!Temp->OpenFromFile(MusicName)){
 			std::cerr << "Unable to load music " << MusicName << '\n';
 			return;
 		}
-		MusicMap.insert(std::pair<std::string, sf::Music>(MusicName, Temp));
+		MusicMap.insert(std::pair<std::string, std::shared_ptr<sf::Music>>(MusicName, Temp));
 	}
-	MusicMap.find(MusicName)->second.SetLoop(Loop);
-	MusicMap.find(MusicName)->second.Play();
+	MusicMap.find(MusicName)->second->SetLoop(Loop);
+	MusicMap.find(MusicName)->second->Play();
 	CurrentMusic = MusicName;
 }
 
 void terra::StopMusic(){
 	if (CurrentMusic.size())
-		MusicMap.find(CurrentMusic)->second.Stop();
-	CurrentMusic = '';
+		MusicMap.find(CurrentMusic)->second->Stop();
+	CurrentMusic = "";
 }
 
 void terra::SwapEndianness(char *Bytes, unsigned long NumBytes){

@@ -12,7 +12,7 @@ namespace terra{
 	 *
 	 * Load a sound if it isn't already loaded, and return it.
 	 */
-	sf::SoundBuffer &GetSound(std::string SoundName);
+	std::shared_ptr<sf::SoundBuffer> GetSound(std::string SoundName);
 
 	/*!
 	 * \param TextureName The filename of the texture
@@ -20,7 +20,7 @@ namespace terra{
 	 *
 	 * Load a texture if it isn't already loaded, and return it.
 	 */
-	sf::Image &GetTexture(std::string TextureName);
+	std::shared_ptr<sf::Image> GetTexture(std::string TextureName);
 
 	/*!
 	 * \return True if the system is Big Endian, false if the system is Little Endian
