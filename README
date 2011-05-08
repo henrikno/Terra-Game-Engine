@@ -1,4 +1,4 @@
 The Terra Game Engine is a game engine designed to be easy to use in the
 creation of 2D games. It provides an object manager, resource manager, level
 loader, game loop, NBT parser, and more! It is written in pure C++0x,
-and conforms to the portions of the standard implemented in GCC 4.5.2.
+and conforms to the portions of the standard implemented in GCC 4.6.
