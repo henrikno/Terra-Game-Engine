@@ -4,6 +4,11 @@
 #include <vector>
 
 namespace terra{
+	/*!
+	 * \brief A Perlin Noise generator
+	 *
+	 * A Perlin Noise generator. Useful for level generation, texture generation, and other things.
+	 */
 	class PerlinNoise{
 		private:
 			unsigned int Seed;
@@ -16,7 +21,7 @@ namespace terra{
 			/*!
 			 * \param NewSeed The seed of the noise generator
 			 *
-			 * Creates a new Perlin Noise generator and initializes it.
+			 * Create a new Perlin Noise generator and initialize it.
 			 */
 			PerlinNoise(unsigned int NewSeed);
 
@@ -38,7 +43,7 @@ namespace terra{
 			/*!
 			 * \param NewSeed The new seed of the noise generator
 			 *
-			 * Resets the seed of the noise generator.
+			 * Reset the seed of the noise generator.
 			 */
 			void Reseed(unsigned int NewSeed);
 

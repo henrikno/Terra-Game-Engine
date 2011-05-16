@@ -2,38 +2,39 @@
 #define TERRA_OBJECT_HPP
 
 #include <SFML/Graphics.hpp>
+#include <string>
+#include "Item.hpp"
 
 namespace terra{
 	/*!
-	 * \brief Base object
+	 * \brief An Ogmo Object
 	 *
-	 * A base object from which all other game objects are derived.
+	 * An Ogmo Object. Anything that has its own behavior is an object.
 	 */
-	class Object{
+	class Object : public Item{
+		private:
+			std::string Name;
 		public:
 			/*!
-			 * Create an object.
-			 */
-			Object();
-
-			/*!
-			 * \param Event The event to be processed
+			 * \param ObjectName The name of the object
 			 *
-			 * Process an event.
+			 * Create a new object.
 			 */
-			virtual void OnEvent(sf::Event Event) = 0;
+			Object(std::string ObjectName);
 
 			/*!
-			 * General updates to be run each frame.
-			 */
-			virtual void OnFrame() = 0;
-
-			/*!
-			 * \param Window The window to be rendered to
+			 * \return The type of the item
 			 *
-			 * Render the object onto the window.
+			 * Retrieve the type of the item.
 			 */
-			virtual void OnRender(sf::RenderTarget &Target) = 0;
+			const Item::ItemType GetItemType() const;
+
+			/*!
+			 * \return The name of the object
+			 *
+			 * Retrieve the name of the object.
+			 */
+			const std::string &GetName() const;
 
 			/*!
 			 * Destroy the object.

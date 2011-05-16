@@ -1,92 +1,98 @@
 #ifndef TERRA_ENGINE_HPP
 #define TERRA_ENGINE_HPP
 
+#include <list>
 #include <map>
+#include <memory>
 #include <SFML/Graphics.hpp>
 #include <string>
-#include "NBT.hpp"
+#include "Layer.hpp"
 #include "Object.hpp"
+#include "OgmoObject.hpp"
+#include "RapidXML.hpp"
 
 namespace terra{
+	/*!
+	 * \brief The game engine
+	 *
+	 * The game engine. There can only be one instance of it. It does pretty much everything to keep the game running.
+	 */
 	class Engine{
 		private:
-			sf::RenderWindow GameWindow;
+			bool Initialized;
+			std::map<std::string, std::shared_ptr<Object> (*)(const OgmoObject &)> Callbacks;
+			std::list<std::shared_ptr<Layer>> Layers;
+			std::map<std::string, std::shared_ptr<Layer>> NamedLayers;
 			bool NewLevel;
-			std::string NewLevelName;
-			std::map<std::string, std::shared_ptr<terra::Object> (*)(nbt::Compound*)> ObjectCallbacks;
-			std::multimap<int, std::shared_ptr<terra::Object>> ObjectList;
-			bool Ready;
+			std::string NextLevelName;
+			std::map<std::string, OgmoObject> OgmoObjects;
+			sf::RenderWindow Window;
+
+			void ParseLevel();
+			void ParseObjectFolder(rapidxml::xml_node<> *Folder);
+			void ParseProject();
 
 			Engine();
-			Engine(const terra::Engine &Copy);
-			terra::Engine &operator=(const terra::Engine &Copy);
-			void PrepareLevel();
+			Engine(const Engine &Copy);
+			Engine &operator=(const Engine& Copy);
 		public:
 			/*!
-			 * \return Reference to the singleton instance
+			 * \return A reference to the Engine's singleton instance
 			 *
-			 * Retrieve a reference to the singleton instance.
+			 * Retrieve a reference to the Engine's singleton instance.
 			 */
-			static terra::Engine &Get();
-
-			std::multimap<int, std::shared_ptr<terra::Object>> &GetObjects();
+			static Engine &Get();
 
 			/*!
-			 * \return The major version of OpenGL
+			 * \param Name The name of the layer to retrieve
+			 * \return A shared pointer to the layer with the given name
 			 *
-			 * Retrieve the major version of OpenGL.
+			 * Retrieve a shared pointer to the layer with the given name.
 			 */
-			const int GetOpenGLMajorVersion() const;
+			std::shared_ptr<Layer> GetLayer(std::string Name);
 
 			/*!
-			 * \return The minor version of OpenGL
-			 *
-			 * Retrieve the minor version of OpenGL.
-			 */
-			const int GetOpenGLMinorVersion() const;
-
-			/*!
-			 * \return Reference to the game window
+			 * \return A reference to the game window
 			 *
 			 * Retrieve a reference to the game window.
 			 */
 			sf::RenderWindow &GetWindow();
 
 			/*!
-			 * \param argc The argc variable in main()
-			 * \param argv The argv variable in main()
+			 * \param argc The argc variable from main()
+			 * \param argv The argv variable from main()
 			 *
-			 * Process any arguments passed on the command line. MUST BE CALLED BEFORE Run()!
+			 * Processes the variables passed to the engine, and prepares the game.
 			 */
-			void Initialize(int argc, char *argv[]);
+			void Initialize(const int argc, char *argv[]);
 
 			/*!
-			 * \param LevelName The filename of the level to load
+			 * \param Filename The filename of the level to be loaded
 			 *
-			 * Loads a level from a specified path, where the root directory is the executable's directory.
+			 * Loads a new level, which replaces the current one in memory. The level loading will not run until the beginning of the next frame.
 			 */
-			void LoadLevel(std::string LevelName);
+			void LoadLevel(std::string Filename);
 
 			/*!
-			 * \return The return code for main()
+			 * \return 0 if the game ended successfully, anything else means an error
 			 *
-			 * The game loop. Call at the end of main() and return its result.
+			 * Runs the game. You MUST call Initialize() first!
 			 */
 			int Main();
 
 			/*!
-			 * \param Name The name of the object, which is used in level files
-			 * \param CallbackConstructor A callback function which takes an NBT Compound containing information on the object, and returns a shared pointer to an instance of the object
+			 * \param Name The name for the object used in the Ogmo Editor
+			 * \param Callback A callback function which creates a new shared pointer to the object
 			 *
-			 * Registers an object with the engine for use in level loading, consisting of a string to identify the object, and a callback to create an instance of the object.
+			 * Register a new object in the game engine so it can be parsed out of the Ogmo Levels and into the game.
 			 */
-			void Register(std::string Name, std::shared_ptr<terra::Object> (*CallbackConstructor)(nbt::Compound*));
+			void RegisterObject(std::string Name, std::shared_ptr<Object> (*Callback)(const OgmoObject &));
 
 			/*!
-			 * Destroy the engine.
+			 * Destroy the Engine.
 			 */
 			~Engine();
 	};
-}
+};
 
 #endif
