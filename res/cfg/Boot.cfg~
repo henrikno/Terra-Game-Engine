@@ -1,9 +1,0 @@
-<config>
-	<window>
-		<width>640</width>
-		<height>480</height>
-		<framerate>60</framerate>
-		<title>Terra Game Engine</title>
-	</window>
-	<level>res/levels/Hello.lvl</level>
-</config>
