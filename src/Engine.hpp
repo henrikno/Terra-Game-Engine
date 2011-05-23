@@ -76,6 +76,13 @@ namespace terra{
 			void Initialize(const int argc, char *argv[]);
 
 			/*!
+			 * \return True if the console is open, false otherwise
+			 *
+			 * Determines if the console is open or not. Useful for stopping animations in the OnRender event if the console is open.
+			 */
+			const bool IsConsoleOpen() const;
+
+			/*!
 			 * \param Filename The filename of the level to be loaded
 			 *
 			 * Loads a new level, which replaces the current one in memory. The level loading will not run until the beginning of the next frame.

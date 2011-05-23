@@ -94,6 +94,10 @@ void terra::Engine::Initialize(const int argc, char *argv[]){
 	Initialized = true;
 }
 
+const bool terra::Engine::IsConsoleOpen() const{
+	return ConsoleOpen;
+}
+
 void terra::Engine::LoadLevel(std::string Filename){
 	NewLevel = true;
 	NextLevelName = Filename;
