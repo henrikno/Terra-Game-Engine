@@ -5,7 +5,12 @@
 #include "Engine.hpp"
 
 terra::Engine::Engine(){
+	ConsoleOpen = false;
 	Initialized = false;
+}
+
+void terra::Engine::Error(const std::string &ErrorMessage){
+	ConsoleLog.push_back(std::pair<unsigned int, std::string>(2, ErrorMessage));
 }
 
 terra::Engine &terra::Engine::Get(){
@@ -34,7 +39,7 @@ void terra::Engine::Initialize(const int argc, char *argv[]){
 	Buffer[Length] = 0;
 	FileStream.read(Buffer, Length);
 	if (!FileStream.good()){
-		std::cerr << "Error: Unexpected error occured when reading \"res/cfg/Boot.cfg\"\n";
+		Error("Unexpected error occured when reading \"res/cfg/Boot.cfg\"\n");
 		FileStream.close();
 		return;
 	}
@@ -45,7 +50,7 @@ void terra::Engine::Initialize(const int argc, char *argv[]){
 	Boot.parse<0>(&String.at(0));
 	rapidxml::xml_node<> *Root = Boot.first_node("config");
 	if (Root == nullptr || Root->type() != rapidxml::node_element){
-		std::cerr << "Error: No root node found in \"res/cfg/Boot.cfg\"\n";
+		Error("No root node found in \"res/cfg/Boot.cfg\"\n");
 		return;
 	}
 	rapidxml::xml_node<> *WindowAttributes = Root->first_node("window");
@@ -83,8 +88,6 @@ void terra::Engine::Initialize(const int argc, char *argv[]){
 			int Temp = atoi((++i)->c_str());
 			Height = Temp > 0 ? Temp : Height;
 		}
-		else
-			std::cerr << "Invalid option on command line!\n";
 	}
 	ParseProject();
 	Window.Create(sf::VideoMode(Width, Height, 32), Title);
@@ -98,34 +101,79 @@ void terra::Engine::LoadLevel(std::string Filename){
 
 int terra::Engine::Main(){
 	if (!Initialized){
-		std::cerr << "Game attempted to run before initialization!\n";
+		Error("Game attempted to run before initialization!\n");
 		return -1;
 	}
+	sf::Font ConsoleFont;
+	if (!ConsoleFont.LoadFromFile("res/fonts/DejaVuSansMono.ttf")){
+		Warning("Unable to locate the console font. Going with default Arial.");
+		ConsoleFont = sf::Font::GetDefaultFont();
+	}
 	while (Window.IsOpened()){
-		if (NewLevel)
-			ParseLevel();
-		sf::Event Event;
-		while (Window.PollEvent(Event)){
-			if (Event.Type == sf::Event::Closed)
-				Window.Close();
-			else{
-				for (auto i = Layers.begin(); i != Layers.end(); ++i){
-					for (auto j = (*i)->Begin(); j != (*i)->End(); ++j)
-						(*j)->OnEvent(Event);
-				}
+		if (!ConsoleOpen){
+			if (NewLevel)
+				ParseLevel();
+			sf::Event Event;
+			while (Window.PollEvent(Event)){
+				if (Event.Type == sf::Event::Closed)
+					Window.Close();
+				else if (Event.Type == sf::Event::KeyPressed && Event.Key.Code == sf::Key::Escape)
+					ConsoleOpen = true;
+				else
+					for (auto i = Layers.begin(); i != Layers.end(); ++i)
+						for (auto j = (*i)->Begin(); j != (*i)->End(); ++j)
+							(*j)->OnEvent(Event);
 			}
+			Window.Clear();
+			for (auto i = Layers.begin(); i != Layers.end(); ++i)
+				for (auto j = (*i)->Begin(); j != (*i)->End(); ++j)
+					(*j)->OnFrame();
+			for (auto i = Layers.begin(); i != Layers.end(); ++i)
+				for (auto j = (*i)->Begin(); j != (*i)->End(); ++j)
+					(*j)->OnRender(Window);
+			Window.Display();
 		}
-		for (auto i = Layers.begin(); i != Layers.end(); ++i){
-			for (auto j = (*i)->Begin(); j != (*i)->End(); ++j)
-				(*j)->OnFrame();
+		else{
+			sf::Event Event;
+			while (Window.PollEvent(Event)){
+				if (Event.Type == sf::Event::Closed)
+					Window.Close();
+				else if (Event.Type == sf::Event::KeyPressed && Event.Key.Code == sf::Key::Escape)
+					ConsoleOpen = false;
+			}
+			sf::View Temp = Window.GetView();
+			sf::View Replacement(sf::FloatRect(0, 0, Window.GetWidth(), Window.GetHeight()));
+			Window.SetView(Replacement);
+			Window.Clear();
+			for (auto i = Layers.begin(); i != Layers.end(); ++i)
+				for (auto j = (*i)->Begin(); j != (*i)->End(); ++j)
+					(*j)->OnRender(Window);
+			Window.Draw(sf::Shape::Rectangle(0., 0., Window.GetWidth(), Window.GetHeight(), sf::Color(0, 0, 0, 170)));
+			unsigned int LineCounter = 0;
+			unsigned int LineMax = Window.GetHeight()/20;
+			for (auto i = ConsoleLog.rbegin(); i != ConsoleLog.rend(); ++i){
+				if (LineCounter >= LineMax)
+					break;
+				unsigned int LineY = Window.GetHeight()-(LineCounter+1)*20;
+				sf::Text Line(i->second, ConsoleFont, 16);
+				if (i->first == 1)
+					Line.SetColor(sf::Color::Yellow);
+				else if (i->first == 2)
+					Line.SetColor(sf::Color::Red);
+				Line.SetX(2);
+				Line.SetY(LineY);
+				Window.Draw(Line);
+				++LineCounter;
+			}
+			Window.Display();
+			Window.SetView(Temp);
 		}
-		for (auto i = Layers.begin(); i != Layers.end(); ++i){
-			for (auto j = (*i)->Begin(); j != (*i)->End(); ++j)
-				(*j)->OnRender(Window);
-		}
-		Window.Display();
 	}
 	return 0;
+}
+
+void terra::Engine::Message(const std::string &TheMessage){
+	ConsoleLog.push_back(std::pair<unsigned int, std::string>(0, TheMessage));
 }
 
 void terra::Engine::ParseLevel(){
@@ -142,7 +190,7 @@ void terra::Engine::ParseLevel(){
 	Buffer[Length] = 0;
 	FileStream.read(Buffer, Length);
 	if (!FileStream.good()){
-		std::cerr << "Error: Unexpected error occured when reading \"" << NextLevelName << "\"\n";
+		Error("Unexpected error occured when reading \"" + NextLevelName + "\"\n");
 		FileStream.close();
 		return;
 	}
@@ -153,7 +201,7 @@ void terra::Engine::ParseLevel(){
 	Level.parse<0>(&String.at(0));
 	rapidxml::xml_node<> *Root = Level.first_node("level");
 	if (Root == nullptr || Root->type() != rapidxml::node_element){
-		std::cerr << "Error: No root node found in Ogmo Editor Level \"" << NextLevelName << "\"\n";
+		Error("No root node found in Ogmo Editor Level \"" + NextLevelName + "\"\n");
 		return;
 	}
 	rapidxml::xml_node<> *LayerIterator;
@@ -168,14 +216,14 @@ void terra::Engine::ParseLevel(){
 				if (j->type() != rapidxml::node_element)
 					continue;
 				if (OgmoObjects.find(j->name()) == OgmoObjects.end()){
-					std::cerr << "Error: No object of name \"" << j->name() << "\" exists in the Ogmo Project\n";
+					Error(std::string("No object of name \"") + j->name() + "\" exists in the Ogmo Project\n");
 					continue;
 				}
 				terra::OgmoObject NewObject = OgmoObjects[j->name()];
 				for (auto k = j->first_attribute(); k != nullptr; k = k->next_attribute())
 					NewObject.Attributes[k->name()] = k->value();
 				if (Callbacks.find(j->name()) == Callbacks.end()){
-					std::cerr << "Error: No object of name \"" << j->name() << "\" is registered in the engine\n";
+					Error(std::string("No object of name \"") + j->name() + "\" is registered in the engine\n");
 					continue;
 				}
 				i->second->AddItem(Callbacks[j->name()](NewObject));
@@ -222,7 +270,7 @@ void terra::Engine::ParseProject(){
 	Buffer[Length] = 0;
 	FileStream.read(Buffer, Length);
 	if (!FileStream.good()){
-		std::cerr << "Error: Unexpected error occured when reading \"res/cfg/Project.oep\"\n";
+		Error("Unexpected error occured when reading \"res/cfg/Project.oep\"\n");
 		FileStream.close();
 		return;
 	}
@@ -233,7 +281,7 @@ void terra::Engine::ParseProject(){
 	Project.parse<0>(&String.at(0));
 	rapidxml::xml_node<> *Root = Project.first_node("project");
 	if (Root == nullptr || Root->type() != rapidxml::node_element){
-		std::cerr << "Error: No root node found in Ogmo Editor Project \"res/cfg/Project.oep\"\n";
+		Error("No root node found in Ogmo Editor Project \"res/cfg/Project.oep\"\n");
 		return;
 	}
 	// Parse Objects
@@ -246,12 +294,12 @@ void terra::Engine::ParseProject(){
 		for (rapidxml::xml_node<> *LayerIterator = ProjectIterator->first_node(); LayerIterator != nullptr; LayerIterator = LayerIterator->next_sibling()){
 			if (LayerIterator->type() == rapidxml::node_element && LayerIterator->name() == "grid"){
 				//! \todo Implement Ogmo Grids
-				std::cerr << "Warning: Grids are not supported at this time\n";
+				Warning("Grids are not supported at this time\n");
 				continue;
 			}
 			else if (LayerIterator->type() == rapidxml::node_element && LayerIterator->name() == "tiles"){
 				//! \todo Implement Ogmo Tiles
-				std::cerr << "Warning: Tiles are not supported at this time\n";
+				Warning("Tiles are not supported at this time\n");
 				continue;
 			}
 			else if (LayerIterator->type() == rapidxml::node_element && LayerIterator->name() == "objects"){
@@ -264,10 +312,14 @@ void terra::Engine::ParseProject(){
 
 void terra::Engine::RegisterObject(std::string Name, std::shared_ptr<terra::Object> (*Callback)(const terra::OgmoObject &)){
 	if (Callbacks.find(Name) != Callbacks.end()){
-		std::cerr << "Object with name \"" << Name << "\" already registered\n";
+		Warning(std::string("Object with name \"") + Name + "\" already registered\n");
 		return;
 	}
 	Callbacks.insert(std::pair<std::string, std::shared_ptr<terra::Object> (*)(const terra::OgmoObject &)>(Name, Callback));
+}
+
+void terra::Engine::Warning(const std::string &WarningMessage){
+	ConsoleLog.push_back(std::pair<unsigned int, std::string>(1, WarningMessage));
 }
 
 terra::Engine::~Engine(){

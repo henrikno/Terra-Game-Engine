@@ -2,6 +2,7 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include "Engine.hpp"
 #include "Utilities.hpp"
 
 std::string CurrentMusic;
@@ -13,7 +14,7 @@ std::shared_ptr<sf::SoundBuffer> terra::GetSound(std::string SoundName){
 	if (SoundMap.find(SoundName) == SoundMap.end()){
 		std::shared_ptr<sf::SoundBuffer> Temp(new sf::SoundBuffer);
 		if (!Temp->LoadFromFile(SoundName))
-			std::cerr << "Unable to load sound " << SoundName << '\n';
+			terra::Engine::Get().Error(std::string("Unable to load sound ") + SoundName + '\n');
 		SoundMap.insert(std::pair<std::string, std::shared_ptr<sf::SoundBuffer>>(SoundName, Temp));
 	}
 	return SoundMap.find(SoundName)->second;
@@ -23,7 +24,7 @@ std::shared_ptr<sf::Image> terra::GetTexture(std::string TextureName){
 	if (TextureMap.find(TextureName) == TextureMap.end()){
 		std::shared_ptr<sf::Image> Temp(new sf::Image);
 		if (!Temp->LoadFromFile(TextureName))
-			std::cerr << "Unable to load texture " << TextureName << '\n';
+			terra::Engine::Get().Error(std::string("Unable to load texture ") + TextureName + '\n');
 		TextureMap.insert(std::pair<std::string, std::shared_ptr<sf::Image>>(TextureName, Temp));
 	}
 	return TextureMap.find(TextureName)->second;
@@ -94,7 +95,7 @@ void terra::PlayMusic(std::string MusicName, bool Loop, bool Pause){
 	if (MusicMap.find(MusicName) == MusicMap.end()){
 		std::shared_ptr<sf::Music> Temp(new sf::Music);
 		if (!Temp->OpenFromFile(MusicName)){
-			std::cerr << "Unable to load music " << MusicName << '\n';
+			terra::Engine::Get().Error(std::string("Unable to load music ") + MusicName + '\n');
 			return;
 		}
 		MusicMap.insert(std::pair<std::string, std::shared_ptr<sf::Music>>(MusicName, Temp));

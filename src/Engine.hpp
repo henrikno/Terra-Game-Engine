@@ -19,8 +19,10 @@ namespace terra{
 	 */
 	class Engine{
 		private:
-			bool Initialized;
 			std::map<std::string, std::shared_ptr<Object> (*)(const OgmoObject &)> Callbacks;
+			std::list<std::pair<unsigned int, std::string>> ConsoleLog;
+			bool ConsoleOpen;
+			bool Initialized;
 			std::list<std::shared_ptr<Layer>> Layers;
 			std::map<std::string, std::shared_ptr<Layer>> NamedLayers;
 			bool NewLevel;
@@ -34,8 +36,15 @@ namespace terra{
 
 			Engine();
 			Engine(const Engine &Copy);
-			Engine &operator=(const Engine& Copy);
+			Engine &operator=(const Engine &Copy);
 		public:
+			/*!
+			 * \param ErrorMessage A message describing the error
+			 *
+			 * Sends an error to the console.
+			 */
+			void Error(const std::string &ErrorMessage);
+
 			/*!
 			 * \return A reference to the Engine's singleton instance
 			 *
@@ -81,12 +90,26 @@ namespace terra{
 			int Main();
 
 			/*!
+			 * \param TheMessage A message
+			 *
+			 * Sends a message to the console.
+			 */
+			void Message(const std::string &TheMessage);
+
+			/*!
 			 * \param Name The name for the object used in the Ogmo Editor
 			 * \param Callback A callback function which creates a new shared pointer to the object
 			 *
 			 * Register a new object in the game engine so it can be parsed out of the Ogmo Levels and into the game.
 			 */
 			void RegisterObject(std::string Name, std::shared_ptr<Object> (*Callback)(const OgmoObject &));
+
+			/*!
+			 * \param WarningMessage A message describing the warning
+			 *
+			 * Sends a warning to the console.
+			 */
+			void Warning(const std::string &WarningMessage);
 
 			/*!
 			 * Destroy the Engine.
