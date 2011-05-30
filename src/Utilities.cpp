@@ -1,7 +1,7 @@
+#include <cmath>
 #include <cstdint>
 #include <iostream>
 #include <map>
-#include <memory>
 #include "Engine.hpp"
 #include "Utilities.hpp"
 
@@ -9,6 +9,28 @@ std::string CurrentMusic;
 std::map<std::string, std::shared_ptr<sf::Music>> MusicMap;
 std::map<std::string, std::shared_ptr<sf::SoundBuffer>> SoundMap;
 std::map<std::string, std::shared_ptr<sf::Image>> TextureMap;
+
+std::list<unsigned int> terra::DetectConcavePoints(sf::Shape Shape){
+	std::list<unsigned int> PointList;
+	for (unsigned int i = 0; i < Shape.GetPointsCount(); ++i){
+		sf::Vector2f LeftPoint = Shape.GetPointPosition(i > 0 ? i-1 : Shape.GetPointsCount()-1);
+		sf::Vector2f Point = Shape.GetPointPosition(i);
+		sf::Vector2f RightPoint = Shape.GetPointPosition(i < Shape.GetPointsCount()-1 ? i+1 : 0);
+		LeftPoint -= Point;
+		RightPoint -= Point;
+		double Length = sqrt(Point.x*Point.x+Point.y*Point.y);
+		double CosineTheta = Point.y/Length;
+		double SineTheta = Point.x/Length;
+		LeftPoint = sf::Vector2f(LeftPoint.x*CosineTheta-LeftPoint.y*SineTheta, LeftPoint.y*CosineTheta+LeftPoint.x*SineTheta);
+		RightPoint = sf::Vector2f(RightPoint.x*CosineTheta-RightPoint.y*SineTheta, RightPoint.y*CosineTheta+RightPoint.x*SineTheta);
+		double LeftSlope = (LeftPoint.y-Point.y)/LeftPoint.x;
+		double RightSlope = (RightPoint.y-Point.y)/RightPoint.x;
+		double Curvature = 2.*(LeftSlope-RightSlope)/(LeftPoint.x-RightPoint.x);
+		if (Curvature > 0.)
+			PointList.push_back(i);
+	}
+	return PointList;
+}
 
 std::shared_ptr<sf::SoundBuffer> terra::GetSound(std::string SoundName){
 	if (SoundMap.find(SoundName) == SoundMap.end()){

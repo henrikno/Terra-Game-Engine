@@ -3,9 +3,19 @@
 
 #include <SFML/Audio.hpp>
 #include <SFML/Graphics.hpp>
+#include <list>
+#include <memory>
 #include <string>
 
 namespace terra{
+	/*!
+	 * \param Shape The shape to check for concave points
+	 * \return A list of point ids that are concave
+	 *
+	 * Detects all of the concave points in a shape.
+	 */
+	std::list<unsigned int> DetectConcavePoints(sf::Shape Shape);
+
 	/*!
 	 * \param SoundName The filename of the sound
 	 * \return A reference to the sound
