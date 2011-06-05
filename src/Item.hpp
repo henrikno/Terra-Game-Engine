@@ -15,6 +15,7 @@ namespace terra{
 			 * An enumeration of item types.
 			 */
 			enum ItemType{
+				Tile,
 				Object
 			};
 

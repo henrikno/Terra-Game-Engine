@@ -259,7 +259,11 @@ void terra::Engine::ParseObjectFolder(rapidxml::xml_node<> *Folder){
 				NewObject.Attributes[AttributeName] = DefaultValue;
 			}
 		}
-		OgmoObjects.insert(std::pair<std::string, terra::OgmoObject>(FolderIterator->first_attribute("name")->value(), NewObject));
+		if (OgmoObjects.find(FolderIterator->first_attribute("name")->value()) == OgmoObjects.end()){
+			Error(std::string("Object of type \"") + FolderIterator->first_attribute("name")->value() + "\" already exists\n");
+			continue;
+		}
+		OgmoObjects[FolderIterator->first_attribute("name")->value()] = NewObject;
 	}
 	for (rapidxml::xml_node<> *FolderIterator = Folder->first_node("folder"); FolderIterator != nullptr; FolderIterator = FolderIterator->next_sibling("folder"))
 		ParseObjectFolder(FolderIterator);
@@ -288,6 +292,39 @@ void terra::Engine::ParseProject(){
 		Error("No root node found in Ogmo Editor Project \"res/cfg/Project.oep\"\n");
 		return;
 	}
+	// Parse Settings
+	std::string WorkingDirectory = "res/cfg/";
+	bool ReadIn = false;
+	for (rapidxml::xml_node<> *ProjectIterator = Root->first_node("settings"); ProjectIterator != nullptr; ProjectIterator = ProjectIterator->next_sibling("settings")){
+		if (ProjectIterator->type() != rapidxml::node_element)
+			continue;
+		for (rapidxml::xml_node<> *SettingsIterator = ProjectIterator->first_node("workingDirectory"); SettingsIterator != nullptr; SettingsIterator = SettingsIterator->next_sibling("workingDirectory")){
+			if (SettingsIterator->type() != rapidxml::node_element || SettingsIterator->first_node() == nullptr || SettingsIterator->first_node()->type() != rapidxml::node_data)
+				continue;
+			WorkingDirectory += SettingsIterator->first_node()->value();
+			WorkingDirectory += '/';
+			ReadIn = true;
+			break;
+		}
+		if (ReadIn)
+			break;
+	}
+	// Parse Tilesets
+	for (rapidxml::xml_node<> *ProjectIterator = Root->first_node("tilesets"); ProjectIterator != nullptr; ProjectIterator = ProjectIterator->next_sibling("tilesets")){
+		if (ProjectIterator->type() != rapidxml::node_element)
+			continue;
+		for (rapidxml::xml_node<> *TilesetIterator = ProjectIterator->first_node("tileset"); TilesetIterator != nullptr; TilesetIterator = TilesetIterator->next_sibling("tileset")){
+			if (TilesetIterator->type() != rapidxml::node_element || TilesetIterator->first_attribute("name") == nullptr || TilesetIterator->first_attribute("image") == nullptr)
+				continue;
+			terra::OgmoTileset NewTileset;
+			NewTileset.Filename = TilesetIterator->first_attribute("image")->value();
+			if (OgmoTilesets.find(TilesetIterator->first_attribute("name")->value()) == OgmoTilesets.end()){
+				Error(std::string("A tileset with the name \"") + TilesetIterator->first_attribute("name")->value() + "\" already exists\n");
+				continue;
+			}
+			OgmoTilesets[TilesetIterator->first_attribute("name")->value()] = NewTileset;
+		}
+	}
 	// Parse Objects
 	for (rapidxml::xml_node<> *ProjectIterator = Root->first_node("objects"); ProjectIterator != nullptr; ProjectIterator = ProjectIterator->next_sibling("objects"))
 		ParseObjectFolder(ProjectIterator);
@@ -302,12 +339,27 @@ void terra::Engine::ParseProject(){
 				continue;
 			}
 			else if (LayerIterator->type() == rapidxml::node_element && LayerIterator->name() == "tiles"){
-				//! \todo Implement Ogmo Tiles
-				Warning("Tiles are not supported at this time\n");
-				continue;
+				if (LayerIterator->first_attribute("name") == nullptr)
+					continue;
+				bool AsObjects = false;
+				if (LayerIterator->first_attribute("exportAsObjects") != nullptr && LayerIterator->first_attribute("exportAsObjects")->value() == "true")
+					AsObjects = true;
+				if (NamedLayers.find(LayerIterator->first_attribute("name")->value()) != NamedLayers.end()){
+					Error(std::string("A tile layer with the name \"") + LayerIterator->first_attribute("name")->value() + "\" already exists\n");
+					continue;
+				}
+				OgmoTilesAsObjects[LayerIterator->first_attribute("name")->value()] = AsObjects;
+				NamedLayers[LayerIterator->first_attribute("name")->value()] = std::shared_ptr<terra::Layer>(new terra::Layer(terra::Item::Tile));
+				Layers.push_back(NamedLayers[LayerIterator->first_attribute("name")->value()]);
 			}
 			else if (LayerIterator->type() == rapidxml::node_element && LayerIterator->name() == "objects"){
-				NamedLayers.insert(std::pair<std::string, std::shared_ptr<terra::Layer>>(LayerIterator->first_attribute("name")->value(), std::shared_ptr<terra::Layer>(new terra::Layer(terra::Item::Object))));
+				if (LayerIterator->first_attribute("name") == nullptr)
+					continue;
+				if (NamedLayers.find(LayerIterator->first_attribute("name")->value()) != NamedLayers.end()){
+					Error(std::string("An object layer with the name \"") + LayerIterator->first_attribute("name")->value() + "\" already exists\n");
+					continue;
+				}
+				NamedLayers[LayerIterator->first_attribute("name")->value()] = std::shared_ptr<terra::Layer>(new terra::Layer(terra::Item::Object));
 				Layers.push_back(NamedLayers[LayerIterator->first_attribute("name")->value()]);
 			}
 		}

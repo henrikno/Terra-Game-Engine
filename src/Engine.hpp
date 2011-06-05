@@ -9,6 +9,7 @@
 #include "Layer.hpp"
 #include "Object.hpp"
 #include "OgmoObject.hpp"
+#include "OgmoTileset.hpp"
 #include "RapidXML.hpp"
 
 namespace terra{
@@ -28,6 +29,8 @@ namespace terra{
 			bool NewLevel;
 			std::string NextLevelName;
 			std::map<std::string, OgmoObject> OgmoObjects;
+			std::map<std::string, OgmoTileset> OgmoTilesets;
+			std::map<std::string, bool> OgmoTilesAsObjects;
 			sf::RenderWindow Window;
 
 			void ParseLevel();

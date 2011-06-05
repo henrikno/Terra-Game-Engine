@@ -12,21 +12,28 @@ std::map<std::string, std::shared_ptr<sf::Image>> TextureMap;
 
 std::list<unsigned int> terra::DetectConcavePoints(sf::Shape Shape){
 	std::list<unsigned int> PointList;
+	double CenterX = 0.;
+	double CenterY = 0.;
+	for (unsigned int i = 0; i < Shape.GetPointsCount(); ++i){
+		CenterX += Shape.GetPointPosition(i).x;
+		CenterY += Shape.GetPointPosition(i).y;
+	}
+	CenterX /= Shape.GetPointsCount();
+	CenterY /= Shape.GetPointsCount();
 	for (unsigned int i = 0; i < Shape.GetPointsCount(); ++i){
 		sf::Vector2f LeftPoint = Shape.GetPointPosition(i > 0 ? i-1 : Shape.GetPointsCount()-1);
 		sf::Vector2f Point = Shape.GetPointPosition(i);
 		sf::Vector2f RightPoint = Shape.GetPointPosition(i < Shape.GetPointsCount()-1 ? i+1 : 0);
-		LeftPoint -= Point;
-		RightPoint -= Point;
+		LeftPoint -= sf::Vector2f(CenterX, CenterY);
+		Point -= sf::Vector2f(CenterX, CenterY);
+		RightPoint -= sf::Vector2f(CenterX, CenterY);
 		double Length = sqrt(Point.x*Point.x+Point.y*Point.y);
 		double CosineTheta = Point.y/Length;
 		double SineTheta = Point.x/Length;
-		LeftPoint = sf::Vector2f(LeftPoint.x*CosineTheta-LeftPoint.y*SineTheta, LeftPoint.y*CosineTheta+LeftPoint.x*SineTheta);
-		RightPoint = sf::Vector2f(RightPoint.x*CosineTheta-RightPoint.y*SineTheta, RightPoint.y*CosineTheta+RightPoint.x*SineTheta);
-		double LeftSlope = (LeftPoint.y-Point.y)/LeftPoint.x;
-		double RightSlope = (RightPoint.y-Point.y)/RightPoint.x;
-		double Curvature = 2.*(LeftSlope-RightSlope)/(LeftPoint.x-RightPoint.x);
-		if (Curvature > 0.)
+		double YLeft = LeftPoint.y*CosineTheta+LeftPoint.x*SineTheta;
+		double YMiddle = Length;
+		double YRight = RightPoint.y*CosineTheta+RightPoint.x*SineTheta;
+		if (YLeft > YMiddle || YRight > YMiddle)
 			PointList.push_back(i);
 	}
 	return PointList;
