@@ -7,8 +7,7 @@
 #include <SFML/Graphics.hpp>
 #include <string>
 #include "Layer.hpp"
-#include "Object.hpp"
-#include "OgmoObject.hpp"
+#include "OgmoTileLayer.hpp"
 #include "OgmoTileset.hpp"
 #include "RapidXML.hpp"
 
@@ -20,7 +19,7 @@ namespace terra{
 	 */
 	class Engine{
 		private:
-			std::map<std::string, std::shared_ptr<Object> (*)(const OgmoObject &)> Callbacks;
+			//std::map<std::string, std::shared_ptr<Object> (*)(const OgmoObject &)> Callbacks;
 			std::list<std::pair<unsigned int, std::string>> ConsoleLog;
 			bool ConsoleOpen;
 			bool Initialized;
@@ -28,14 +27,21 @@ namespace terra{
 			std::map<std::string, std::shared_ptr<Layer>> NamedLayers;
 			bool NewLevel;
 			std::string NextLevelName;
-			std::map<std::string, OgmoObject> OgmoObjects;
-			std::map<std::string, OgmoTileset> OgmoTilesets;
-			std::map<std::string, bool> OgmoTilesAsObjects;
 			sf::RenderWindow Window;
 
+			// Ogmo Tileset Stuff
+			std::map<std::string, OgmoTileset> OgmoTilesets;
+			std::map<std::string, OgmoTileLayer> OgmoTileLayers;
+
+			// Parsers
+			void ParseBoot(unsigned int &Width, unsigned int &Height, unsigned int &Framerate, std::string &Title, std::string &InitialLevel);
+			void ParseCommandLine(const int argc, char *argv[], unsigned int &Width, unsigned int &Height);
+			void ParseLayers(rapidxml::xml_node<> *Root);
 			void ParseLevel();
-			void ParseObjectFolder(rapidxml::xml_node<> *Folder);
+			void ParseLevelTileLayer(rapidxml::xml_node<> *TileLayer);
 			void ParseProject();
+			void ParseTileLayer(rapidxml::xml_node<> *TileLayer);
+			void ParseTilesets(rapidxml::xml_node<> *Root);
 
 			Engine();
 			Engine(const Engine &Copy);
@@ -112,7 +118,7 @@ namespace terra{
 			 *
 			 * Register a new object in the game engine so it can be parsed out of the Ogmo Levels and into the game.
 			 */
-			void RegisterObject(std::string Name, std::shared_ptr<Object> (*Callback)(const OgmoObject &));
+			//void RegisterObject(std::string Name, std::shared_ptr<Object> (*Callback)(const OgmoObject &));
 
 			/*!
 			 * \param WarningMessage A message describing the warning

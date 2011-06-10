@@ -1,5 +1,6 @@
 #include <cmath>
 #include <cstdint>
+#include <fstream>
 #include <iostream>
 #include <map>
 #include "Engine.hpp"
@@ -132,6 +133,30 @@ void terra::PlayMusic(std::string MusicName, bool Loop, bool Pause){
 	MusicMap.find(MusicName)->second->SetLoop(Loop);
 	MusicMap.find(MusicName)->second->Play();
 	CurrentMusic = MusicName;
+}
+
+std::vector<char> terra::ReadFile(std::string Filename){
+	std::ifstream FileStream(Filename);
+	FileStream.seekg(0, std::ios::end);
+	int Length = FileStream.tellg();
+	FileStream.seekg(0, std::ios::beg);
+	char *Buffer = new char[Length+1];
+	Buffer[Length] = 0;
+	FileStream.read(Buffer, Length);
+	if (!FileStream.good()){
+		terra::Engine::Get().Error(std::string("Unexpected error occured when reading \"") + Filename + "\"\n");
+		FileStream.close();
+		delete[] Buffer;
+		std::vector<char> Empty;
+		Empty.push_back(0);
+		return Empty;
+	}
+	FileStream.close();
+	std::vector<char> String;
+	for (unsigned int i = 0; i < Length+1; ++i)
+		String.push_back(Buffer[i]);
+	delete[] Buffer;
+	return String;
 }
 
 void terra::StopMusic(){

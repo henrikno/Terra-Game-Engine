@@ -1,11 +1,12 @@
 #ifndef TERRA_UTILITIES_HPP
 #define TERRA_UTILITIES_HPP
 
-#include <SFML/Audio.hpp>
-#include <SFML/Graphics.hpp>
 #include <list>
 #include <memory>
+#include <SFML/Audio.hpp>
+#include <SFML/Graphics.hpp>
 #include <string>
+#include <vector>
 
 namespace terra{
 	/*!
@@ -61,6 +62,14 @@ namespace terra{
 	 * Open some music if it isn't already, and play it.
 	 */
 	void PlayMusic(std::string MusicName, bool Loop = false, bool Pause = false);
+
+	/*!
+	 * \param Filename The name of the file to read from
+	 * \return The contents of the file
+	 *
+	 * Read in the contents of a file.
+	 */
+	std::vector<char> ReadFile(std::string Filename);
 
 	/*!
 	 * Stop any music which is currently playing.

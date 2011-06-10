@@ -5,15 +5,14 @@
 
 namespace terra{
 	/*!
-	 * \brief An Ogmo Tileset
+	 * \brief Ogmo Tileset
 	 *
-	 * An Ogmo Tileset with a filename.
+	 * A structure containing information on tilesets that has been extracted from the level files.
 	 */
 	struct OgmoTileset{
-		/*!
-		 * The filename of the tileset
-		 */
-		std::string Filename;
+		std::string Image;
+		unsigned int TileWidth;
+		unsigned int TileHeight;
 	};
 }
 

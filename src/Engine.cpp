@@ -2,7 +2,12 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <vector>
 #include "Engine.hpp"
+#include "Item.hpp"
+#include "OgmoTile.hpp"
+#include "Tile.hpp"
+#include "Utilities.hpp"
 
 terra::Engine::Engine(){
 	ConsoleOpen = false;
@@ -30,65 +35,11 @@ sf::RenderWindow &terra::Engine::GetWindow(){
 
 void terra::Engine::Initialize(const int argc, char *argv[]){
 	unsigned int Width = 640, Height = 480, Framerate = 60;
-	std::string Title = "Terra Game Engine";
-	std::ifstream FileStream("res/cfg/Boot.cfg");
-	FileStream.seekg(0, std::ios::end);
-	int Length = FileStream.tellg();
-	FileStream.seekg(0, std::ios::beg);
-	char *Buffer = new char[Length+1];
-	Buffer[Length] = 0;
-	FileStream.read(Buffer, Length);
-	if (!FileStream.good()){
-		Error("Unexpected error occured when reading \"res/cfg/Boot.cfg\"\n");
-		FileStream.close();
-		return;
-	}
-	FileStream.close();
-	std::string String = Buffer;
-	delete[] Buffer;
-	rapidxml::xml_document<> Boot;
-	Boot.parse<0>(&String.at(0));
-	rapidxml::xml_node<> *Root = Boot.first_node("config");
-	if (Root == nullptr || Root->type() != rapidxml::node_element){
-		Error("No root node found in \"res/cfg/Boot.cfg\"\n");
-		return;
-	}
-	rapidxml::xml_node<> *WindowAttributes = Root->first_node("window");
-	if (WindowAttributes != nullptr && WindowAttributes->type() == rapidxml::node_element){
-		rapidxml::xml_node<> *WindowWidth = WindowAttributes->first_node("width");
-		rapidxml::xml_node<> *WindowHeight = WindowAttributes->first_node("height");
-		rapidxml::xml_node<> *WindowFramerate = WindowAttributes->first_node("framerate");
-		rapidxml::xml_node<> *WindowTitle = WindowAttributes->first_node("title");
-		if (WindowWidth != nullptr && WindowWidth->type() == rapidxml::node_element && WindowWidth->first_node()->type() == rapidxml::node_data){
-			int Temp = atoi(WindowWidth->first_node()->value());
-			Width = Temp > 0 ? Temp : Width;
-		}
-		if (WindowHeight != nullptr && WindowHeight->type() == rapidxml::node_element && WindowHeight->first_node()->type() == rapidxml::node_data){
-			int Temp = atoi(WindowHeight->first_node()->value());
-			Height = Temp > 0 ? Temp : Height;
-		}
-		if (WindowFramerate != nullptr && WindowFramerate->type() == rapidxml::node_element && WindowFramerate->first_node()->type() == rapidxml::node_data){
-			int Temp = atoi(WindowFramerate->first_node()->value());
-			Framerate = Temp > 0 ? Temp : Framerate;
-		}
-		if (WindowTitle != nullptr && WindowTitle->type() == rapidxml::node_element && WindowTitle->first_node()->type() == rapidxml::node_data)
-			Title = WindowTitle->first_node()->value();
-	}
+	std::string Title = "Terra Game Engine", InitialLevel = "res/levels/Title.oel";
+	ParseBoot(Width, Height, Framerate, Title, InitialLevel);
+	ParseCommandLine(argc, argv, Width, Height);
 	NewLevel = true;
-	NextLevelName = "res/levels/Title.oel";
-	std::list<std::string> ArgumentList;
-	for (int i = 1; i < argc; ++i)
-		ArgumentList.push_back(argv[i]);
-	for (auto i = ArgumentList.begin(); i != ArgumentList.end(); ++i){
-		if (*i == "-width"){
-			int Temp = atoi((++i)->c_str());
-			Width = Temp > 0 ? Temp : Width;
-		}
-		else if (*i == "-height"){
-			int Temp = atoi((++i)->c_str());
-			Height = Temp > 0 ? Temp : Height;
-		}
-	}
+	NextLevelName = InitialLevel;
 	ParseProject();
 	Window.Create(sf::VideoMode(Width, Height, 32), Title);
 	Initialized = true;
@@ -180,199 +131,247 @@ void terra::Engine::Message(const std::string &TheMessage){
 	ConsoleLog.push_back(std::pair<unsigned int, std::string>(0, TheMessage));
 }
 
-void terra::Engine::ParseLevel(){
-	for (auto i = NamedLayers.begin(); i != NamedLayers.end(); ++i)
-		i->second->Clear();
-	if (!NewLevel)
-		return;
-	NewLevel = false;
-	std::ifstream FileStream(NextLevelName.c_str());
-	FileStream.seekg(0, std::ios::end);
-	int Length = FileStream.tellg();
-	FileStream.seekg(0, std::ios::beg);
-	char *Buffer = new char[Length+1];
-	Buffer[Length] = 0;
-	FileStream.read(Buffer, Length);
-	if (!FileStream.good()){
-		Error("Unexpected error occured when reading \"" + NextLevelName + "\"\n");
-		FileStream.close();
-		return;
-	}
-	FileStream.close();
-	std::string String = Buffer;
-	delete[] Buffer;
-	rapidxml::xml_document<> Level;
-	Level.parse<0>(&String.at(0));
-	rapidxml::xml_node<> *Root = Level.first_node("level");
+void terra::Engine::ParseBoot(unsigned int &Width, unsigned int &Height, unsigned int &Framerate, std::string &Title, std::string &InitialLevel){
+	std::vector<char> Contents = terra::ReadFile("res/cfg/Boot.cfg");
+	rapidxml::xml_document<> Boot;
+	Boot.parse<0>(&Contents[0]);
+	rapidxml::xml_node<> *Root = Boot.first_node("config");
 	if (Root == nullptr || Root->type() != rapidxml::node_element){
-		Error("No root node found in Ogmo Editor Level \"" + NextLevelName + "\"\n");
+		Error("Boot file \"res/cfg/Boot.cfg\" has no root node\n");
 		return;
 	}
-	rapidxml::xml_node<> *LayerIterator;
-	for (auto i = NamedLayers.begin(); i != NamedLayers.end(); ++i){
-		LayerIterator = Root->first_node(i->first.c_str());
-		if (LayerIterator == nullptr)
-			continue;
-		//! \todo Parse Grid Layers
-		//! \todo Parse Tile Layers
-		if (i->second->GetStoredType() == terra::Item::Object){
-			for (auto j = LayerIterator->first_node(); j != nullptr; j = j->next_sibling()){
-				if (j->type() != rapidxml::node_element)
-					continue;
-				if (OgmoObjects.find(j->name()) == OgmoObjects.end()){
-					Error(std::string("No object of name \"") + j->name() + "\" exists in the Ogmo Project\n");
-					continue;
-				}
-				terra::OgmoObject NewObject = OgmoObjects[j->name()];
-				for (auto k = j->first_attribute(); k != nullptr; k = k->next_attribute())
-					NewObject.Attributes[k->name()] = k->value();
-				if (Callbacks.find(j->name()) == Callbacks.end()){
-					Error(std::string("No object of name \"") + j->name() + "\" is registered in the engine\n");
-					continue;
-				}
-				i->second->AddItem(Callbacks[j->name()](NewObject));
-			}
+	rapidxml::xml_node<> *WindowAttributes = Root->first_node("window");
+	if (WindowAttributes != nullptr && WindowAttributes->type() == rapidxml::node_element){
+		rapidxml::xml_node<> *WindowWidth = WindowAttributes->first_node("width");
+		rapidxml::xml_node<> *WindowHeight = WindowAttributes->first_node("height");
+		rapidxml::xml_node<> *WindowFramerate = WindowAttributes->first_node("framerate");
+		rapidxml::xml_node<> *WindowTitle = WindowAttributes->first_node("title");
+		if (WindowWidth != nullptr && WindowWidth->type() == rapidxml::node_element && WindowWidth->first_node()->type() == rapidxml::node_data){
+			int Temp = atoi(WindowWidth->first_node()->value());
+			Width = Temp > 0 ? Temp : Width;
+		}
+		if (WindowHeight != nullptr && WindowHeight->type() == rapidxml::node_element && WindowHeight->first_node()->type() == rapidxml::node_data){
+			int Temp = atoi(WindowHeight->first_node()->value());
+			Height = Temp > 0 ? Temp : Height;
+		}
+		if (WindowFramerate != nullptr && WindowFramerate->type() == rapidxml::node_element && WindowFramerate->first_node()->type() == rapidxml::node_data){
+			int Temp = atoi(WindowFramerate->first_node()->value());
+			Framerate = Temp > 0 ? Temp : Framerate;
+		}
+		if (WindowTitle != nullptr && WindowTitle->type() == rapidxml::node_element && WindowTitle->first_node()->type() == rapidxml::node_data)
+			Title = WindowTitle->first_node()->value();
+	}
+	if (Root->first_node("level") != nullptr && Root->first_node("level")->type() == rapidxml::node_element && Root->first_node("level")->first_node() != nullptr && Root->first_node("level")->first_node()->type() == rapidxml::node_data)
+		InitialLevel = Root->first_node("level")->first_node()->value();
+}
+
+void terra::Engine::ParseCommandLine(const int argc, char *argv[], unsigned int &Width, unsigned int &Height){
+	std::list<std::string> ArgumentList;
+	for (int i = 1; i < argc; ++i)
+		ArgumentList.push_back(argv[i]);
+	for (auto i = ArgumentList.begin(); i != ArgumentList.end(); ++i){
+		if (*i == "-width"){
+			int Temp = atoi((++i)->c_str());
+			Width = Temp > 0 ? Temp : Width;
+		}
+		else if (*i == "-height"){
+			int Temp = atoi((++i)->c_str());
+			Height = Temp > 0 ? Temp : Height;
 		}
 	}
 }
 
-void terra::Engine::ParseObjectFolder(rapidxml::xml_node<> *Folder){
-	if (Folder->type() != rapidxml::node_element)
-		return;
-	for (rapidxml::xml_node<> *FolderIterator = Folder->first_node("object"); FolderIterator != nullptr; FolderIterator = FolderIterator->next_sibling("object")){
-		if (FolderIterator->type() != rapidxml::node_element)
+void terra::Engine::ParseLayers(rapidxml::xml_node<> *Root){
+	for (auto Layers = Root->first_node("layers"); Layers != nullptr; Layers = Layers->next_sibling("layers")){
+		if (Layers->type() != rapidxml::node_element)
 			continue;
-		terra::OgmoObject NewObject;
-		rapidxml::xml_node<> *Values = FolderIterator->first_node("values");
-		if (Values != nullptr && Values->type() == rapidxml::node_element){
-			for (rapidxml::xml_node<> *ValueIterator = Values->first_node(); ValueIterator != nullptr; ValueIterator = ValueIterator->next_sibling()){
-				if (ValueIterator->type() != rapidxml::node_element || ValueIterator->name() != "boolean" || ValueIterator->name() != "integer" || ValueIterator->name() != "number" || ValueIterator->name() != "string" || ValueIterator->name() != "text")
-					continue;
-				std::string AttributeName;
-				std::string DefaultValue;
-				rapidxml::xml_attribute<> *Name = ValueIterator->first_attribute("name");
-				rapidxml::xml_attribute<> *Default = ValueIterator->first_attribute("default");
-				if (Name == nullptr || Default == nullptr)
-					continue;
-				AttributeName = Name->value();
-				DefaultValue = Default->value();
-				NewObject.Attributes[AttributeName] = DefaultValue;
-			}
+		// Parse Tile Layers
+		for (auto LayerIterator = Layers->first_node("tiles"); LayerIterator != nullptr; LayerIterator = LayerIterator->next_sibling("tiles")){
+			if (LayerIterator->type() != rapidxml::node_element)
+				continue;
+			ParseTileLayer(LayerIterator);
 		}
-		if (OgmoObjects.find(FolderIterator->first_attribute("name")->value()) == OgmoObjects.end()){
-			Error(std::string("Object of type \"") + FolderIterator->first_attribute("name")->value() + "\" already exists\n");
-			continue;
-		}
-		OgmoObjects[FolderIterator->first_attribute("name")->value()] = NewObject;
+		//! \todo Parse Object Layers
 	}
-	for (rapidxml::xml_node<> *FolderIterator = Folder->first_node("folder"); FolderIterator != nullptr; FolderIterator = FolderIterator->next_sibling("folder"))
-		ParseObjectFolder(FolderIterator);
+}
+
+void terra::Engine::ParseLevel(){
+	for (auto i = Layers.begin(); i != Layers.end(); ++i)
+		(*i)->Clear();
+	NewLevel = false;
+	std::vector<char> Contents = terra::ReadFile(NextLevelName);
+	rapidxml::xml_document<> Level;
+	Level.parse<0>(&Contents[0]);
+	rapidxml::xml_node<> *LevelRoot = Level.first_node("level");
+	if (LevelRoot == nullptr || LevelRoot->type() != rapidxml::node_element){
+		Error(std::string("Level file \"") + NextLevelName + "\" has no root node\n");
+		return;
+	}
+	for (auto i = NamedLayers.begin(); i != NamedLayers.end(); ++i){
+		rapidxml::xml_node<> *LayerIterator = LevelRoot->first_node(i->first.c_str());
+		if (LayerIterator == nullptr || LayerIterator->type() != rapidxml::node_element)
+			continue;
+		if (i->second->GetStoredType() == terra::Item::Tile)
+			ParseLevelTileLayer(LayerIterator);
+		//! \todo Parse Object Layers
+	}
+}
+
+void terra::Engine::ParseLevelTileLayer(rapidxml::xml_node<> *TileLayer){
+	if (TileLayer->first_attribute("set") == nullptr && !OgmoTileLayers[TileLayer->name()].MultipleTilesets)
+		return;
+	std::string Set;
+	if (!OgmoTileLayers[TileLayer->name()].MultipleTilesets){
+		Set = TileLayer->first_attribute("set")->value();
+		if (OgmoTilesets.find(Set) == OgmoTilesets.end() || !GetTexture(Set))
+			return;
+	}
+	unsigned int TileWidth;
+	unsigned int TileHeight;
+	if (OgmoTileLayers[TileLayer->name()].ExportTileSize){
+		if (TileLayer->first_attribute("tileWidth") == nullptr || TileLayer->first_attribute("tileHeight") == nullptr)
+			return;
+		TileWidth = atoi(TileLayer->first_attribute("tileWidth")->value());
+		TileHeight = atoi(TileLayer->first_attribute("tileHeight")->value());
+	}
+	else if (!OgmoTileLayers[TileLayer->name()].MultipleTilesets){
+		TileWidth = OgmoTilesets[Set].TileWidth;
+		TileHeight = OgmoTilesets[Set].TileHeight;
+	}
+	for (auto TileIterator = TileLayer->first_node("tile"); TileIterator != nullptr; TileIterator = TileIterator->next_sibling("tile")){
+		if (TileIterator->type() != rapidxml::node_element || TileIterator->first_attribute("x") == nullptr || TileIterator->first_attribute("y") == nullptr)
+			continue;
+		sf::Vector2f Position = sf::Vector2f(atof(TileIterator->first_attribute("x")->value()), atof(TileIterator->first_attribute("y")->value()));
+		sf::Vector2<unsigned int> TilePosition;
+		if (OgmoTileLayers[TileLayer->name()].MultipleTilesets){
+			if (TileIterator->first_attribute("set") == nullptr)
+				continue;
+			Set = TileIterator->first_attribute("set")->value();
+			if (OgmoTilesets.find(Set) == OgmoTilesets.end() || !GetTexture(Set))
+				continue;
+		}
+		if (!OgmoTileLayers[TileLayer->name()].ExportTileSize && OgmoTileLayers[TileLayer->name()].MultipleTilesets){
+			TileWidth = OgmoTilesets[Set].TileWidth;
+			TileHeight = OgmoTilesets[Set].TileHeight;
+		}
+		if (OgmoTileLayers[TileLayer->name()].ExportTileIDs){
+			if (TileIterator->first_attribute("id") == nullptr)
+				continue;
+			unsigned int ID = atoi(TileIterator->first_attribute("id")->value());
+			unsigned int IDWidth = (GetTexture(Set)->GetWidth()-GetTexture(Set)->GetWidth()%TileWidth)/TileWidth;
+			unsigned int IDHeight = (GetTexture(Set)->GetHeight()-GetTexture(Set)->GetHeight()%TileHeight)/TileHeight;
+			if (ID >= IDWidth*IDHeight)
+				continue;
+			TilePosition.x = ID%IDWidth*TileWidth;
+			TilePosition.y = (ID-ID%IDWidth)/IDWidth*TileHeight;
+		}
+		else{
+			if (TileIterator->first_attribute("tx") == nullptr || TileIterator->first_attribute("ty") == nullptr)
+				continue;
+			TilePosition.x = atoi(TileIterator->first_attribute("tx")->value());
+			TilePosition.y = atoi(TileIterator->first_attribute("ty")->value());
+		}
+		terra::OgmoTile NextTile;
+		NextTile.Tileset = Set;
+		NextTile.TilePosition = TilePosition;
+		NextTile.TileSize = sf::Vector2<unsigned int>(TileWidth, TileHeight);
+		NextTile.Position = Position;
+		NamedLayers[TileLayer->name()]->AddItem(std::shared_ptr<terra::Item>(new terra::Tile(NextTile)));
+	}
 }
 
 void terra::Engine::ParseProject(){
-	std::ifstream FileStream("res/cfg/Project.oep");
-	FileStream.seekg(0, std::ios::end);
-	int Length = FileStream.tellg();
-	FileStream.seekg(0, std::ios::beg);
-	char *Buffer = new char[Length+1];
-	Buffer[Length] = 0;
-	FileStream.read(Buffer, Length);
-	if (!FileStream.good()){
-		Error("Unexpected error occured when reading \"res/cfg/Project.oep\"\n");
-		FileStream.close();
-		return;
-	}
-	FileStream.close();
-	std::string String = Buffer;
-	delete[] Buffer;
+	std::vector<char> Contents = terra::ReadFile("res/cfg/Levels.oep");
 	rapidxml::xml_document<> Project;
-	Project.parse<0>(&String.at(0));
-	rapidxml::xml_node<> *Root = Project.first_node("project");
-	if (Root == nullptr || Root->type() != rapidxml::node_element){
-		Error("No root node found in Ogmo Editor Project \"res/cfg/Project.oep\"\n");
+	Project.parse<0>(&Contents[0]);
+	rapidxml::xml_node<> *ProjectRoot = Project.first_node("project");
+	if (ProjectRoot == nullptr || ProjectRoot->type() != rapidxml::node_element){
+		Error("Project file \"res/cfg/Levels.oep\" has no root node\n");
 		return;
 	}
-	// Parse Settings
+	ParseTilesets(ProjectRoot);
+	//! \todo Parse Objects
+	ParseLayers(ProjectRoot);
+}
+
+void terra::Engine::ParseTileLayer(rapidxml::xml_node<> *TileLayer){
+	if (TileLayer->first_attribute("name") == nullptr)
+		return;
+	// Initial Properties
+	std::string Name = TileLayer->first_attribute("name")->value();
+	bool MultipleTilesets = false;
+	bool ExportTileSize = false;
+	bool ExportTileIDs = false;
+	// Parse Nonessential Properties
+	if (TileLayer->first_attribute("multipleTilesets") != nullptr && TileLayer->first_attribute("multipleTilesets")->value() == "true")
+		MultipleTilesets = true;
+	if (TileLayer->first_attribute("exportTileSize") != nullptr && TileLayer->first_attribute("exportTileSize")->value() == "true")
+		ExportTileSize = true;
+	if (TileLayer->first_attribute("exportTileIDs") != nullptr && TileLayer->first_attribute("exportTileIDs")->value() == "true")
+		ExportTileIDs = true;
+	// Check for redundancy
+	if (NamedLayers.find(Name) != NamedLayers.end()){
+		Error(std::string("Layer of name \"") + Name + "\" already exists\n");
+		return;
+	}
+	// Create New Layer Data
+	terra::OgmoTileLayer NewTileLayer;
+	NewTileLayer.MultipleTilesets = MultipleTilesets;
+	NewTileLayer.ExportTileSize = ExportTileSize;
+	NewTileLayer.ExportTileIDs = ExportTileIDs;
+	OgmoTileLayers[Name] = NewTileLayer;
+	// Create New Layer
+	std::shared_ptr<terra::Layer> NewLayer(new terra::Layer(terra::Item::Tile));
+	NamedLayers[Name] = NewLayer;
+	Layers.push_back(NewLayer);
+}
+
+void terra::Engine::ParseTilesets(rapidxml::xml_node<> *Root){
 	std::string WorkingDirectory = "res/cfg/";
-	bool ReadIn = false;
-	for (rapidxml::xml_node<> *ProjectIterator = Root->first_node("settings"); ProjectIterator != nullptr; ProjectIterator = ProjectIterator->next_sibling("settings")){
-		if (ProjectIterator->type() != rapidxml::node_element)
+	for (auto Settings = Root->first_node("settings"); Settings != nullptr; Settings = Settings->next_sibling("settings")){
+		if (Settings->type() != rapidxml::node_element)
 			continue;
-		for (rapidxml::xml_node<> *SettingsIterator = ProjectIterator->first_node("workingDirectory"); SettingsIterator != nullptr; SettingsIterator = SettingsIterator->next_sibling("workingDirectory")){
-			if (SettingsIterator->type() != rapidxml::node_element || SettingsIterator->first_node() == nullptr || SettingsIterator->first_node()->type() != rapidxml::node_data)
+		bool Found = false;
+		for (auto WorkingDirectoryNode = Settings->first_node("workingDirectory"); WorkingDirectoryNode != nullptr; WorkingDirectoryNode = WorkingDirectoryNode->next_sibling("workingDirectory")){
+			if (WorkingDirectoryNode->type() != rapidxml::node_element || WorkingDirectoryNode->first_node() == nullptr || WorkingDirectoryNode->first_node()->type() != rapidxml::node_data)
 				continue;
-			WorkingDirectory += SettingsIterator->first_node()->value();
-			WorkingDirectory += '/';
-			ReadIn = true;
+			WorkingDirectory += WorkingDirectoryNode->first_node()->value();
+			Found = true;
 			break;
 		}
-		if (ReadIn)
+		if (Found)
 			break;
 	}
-	// Parse Tilesets
-	for (rapidxml::xml_node<> *ProjectIterator = Root->first_node("tilesets"); ProjectIterator != nullptr; ProjectIterator = ProjectIterator->next_sibling("tilesets")){
-		if (ProjectIterator->type() != rapidxml::node_element)
+	for (auto i = Root->first_node("tilesets"); i != nullptr; i = i->next_sibling("tilesets")){
+		if (i->type() != rapidxml::node_element)
 			continue;
-		for (rapidxml::xml_node<> *TilesetIterator = ProjectIterator->first_node("tileset"); TilesetIterator != nullptr; TilesetIterator = TilesetIterator->next_sibling("tileset")){
-			if (TilesetIterator->type() != rapidxml::node_element || TilesetIterator->first_attribute("name") == nullptr || TilesetIterator->first_attribute("image") == nullptr)
+		for (auto j = i->first_node("tileset"); j != nullptr; j = j->next_sibling("tileset")){
+			if (j->type() != rapidxml::node_element || j->first_attribute("name") == nullptr || j->first_attribute("image") == nullptr || j->first_attribute("tileWidth") == nullptr || j->first_attribute("tileHeight") == nullptr)
 				continue;
+			std::string TilesetName = j->first_attribute("name")->value();
+			std::string TilesetImage = WorkingDirectory + j->first_attribute("image")->value();
+			unsigned int TileWidth = atoi(j->first_attribute("tileWidth")->value());
+			unsigned int TileHeight = atoi(j->first_attribute("tileHeight")->value());
+			if (OgmoTilesets.find(TilesetName) != OgmoTilesets.end()){
+				Warning(std::string("Tileset of name \"") + TilesetName + "\" already exists\n");
+				continue;
+			}
 			terra::OgmoTileset NewTileset;
-			NewTileset.Filename = TilesetIterator->first_attribute("image")->value();
-			if (OgmoTilesets.find(TilesetIterator->first_attribute("name")->value()) == OgmoTilesets.end()){
-				Error(std::string("A tileset with the name \"") + TilesetIterator->first_attribute("name")->value() + "\" already exists\n");
-				continue;
-			}
-			OgmoTilesets[TilesetIterator->first_attribute("name")->value()] = NewTileset;
-		}
-	}
-	// Parse Objects
-	for (rapidxml::xml_node<> *ProjectIterator = Root->first_node("objects"); ProjectIterator != nullptr; ProjectIterator = ProjectIterator->next_sibling("objects"))
-		ParseObjectFolder(ProjectIterator);
-	// Parse Layers
-	for (rapidxml::xml_node<> *ProjectIterator = Root->first_node("layers"); ProjectIterator != nullptr; ProjectIterator = ProjectIterator->next_sibling("layers")){
-		if (ProjectIterator->type() != rapidxml::node_element)
-			continue;
-		for (rapidxml::xml_node<> *LayerIterator = ProjectIterator->first_node(); LayerIterator != nullptr; LayerIterator = LayerIterator->next_sibling()){
-			if (LayerIterator->type() == rapidxml::node_element && LayerIterator->name() == "grid"){
-				//! \todo Implement Ogmo Grids
-				Warning("Grids are not supported at this time\n");
-				continue;
-			}
-			else if (LayerIterator->type() == rapidxml::node_element && LayerIterator->name() == "tiles"){
-				if (LayerIterator->first_attribute("name") == nullptr)
-					continue;
-				bool AsObjects = false;
-				if (LayerIterator->first_attribute("exportAsObjects") != nullptr && LayerIterator->first_attribute("exportAsObjects")->value() == "true")
-					AsObjects = true;
-				if (NamedLayers.find(LayerIterator->first_attribute("name")->value()) != NamedLayers.end()){
-					Error(std::string("A tile layer with the name \"") + LayerIterator->first_attribute("name")->value() + "\" already exists\n");
-					continue;
-				}
-				OgmoTilesAsObjects[LayerIterator->first_attribute("name")->value()] = AsObjects;
-				NamedLayers[LayerIterator->first_attribute("name")->value()] = std::shared_ptr<terra::Layer>(new terra::Layer(terra::Item::Tile));
-				Layers.push_back(NamedLayers[LayerIterator->first_attribute("name")->value()]);
-			}
-			else if (LayerIterator->type() == rapidxml::node_element && LayerIterator->name() == "objects"){
-				if (LayerIterator->first_attribute("name") == nullptr)
-					continue;
-				if (NamedLayers.find(LayerIterator->first_attribute("name")->value()) != NamedLayers.end()){
-					Error(std::string("An object layer with the name \"") + LayerIterator->first_attribute("name")->value() + "\" already exists\n");
-					continue;
-				}
-				NamedLayers[LayerIterator->first_attribute("name")->value()] = std::shared_ptr<terra::Layer>(new terra::Layer(terra::Item::Object));
-				Layers.push_back(NamedLayers[LayerIterator->first_attribute("name")->value()]);
-			}
+			NewTileset.Image = TilesetImage;
+			NewTileset.TileWidth = TileWidth;
+			NewTileset.TileHeight = TileHeight;
+			OgmoTilesets[TilesetName] = NewTileset;
 		}
 	}
 }
 
-void terra::Engine::RegisterObject(std::string Name, std::shared_ptr<terra::Object> (*Callback)(const terra::OgmoObject &)){
+/*void terra::Engine::RegisterObject(std::string Name, std::shared_ptr<terra::Object> (*Callback)(const terra::OgmoObject &)){
 	if (Callbacks.find(Name) != Callbacks.end()){
 		Warning(std::string("Object with name \"") + Name + "\" already registered\n");
 		return;
 	}
 	Callbacks.insert(std::pair<std::string, std::shared_ptr<terra::Object> (*)(const terra::OgmoObject &)>(Name, Callback));
-}
+}*/
 
 void terra::Engine::Warning(const std::string &WarningMessage){
 	ConsoleLog.push_back(std::pair<unsigned int, std::string>(1, WarningMessage));
