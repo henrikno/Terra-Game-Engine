@@ -27,18 +27,25 @@ namespace terra{
 
 			/*!
 			 * \param X The coordinate of the noise value
+			 * \param Octaves The number of octaves of Perlin Noise
+			 * \param Persistence The persistence of the octaves
+			 * \param ScalingX The scaling value for the x coordinate between octaves
 			 *
 			 * Retrieve a noise value on the one-dimensional plane.
 			 */
-			double Noise1D(double X, unsigned int Layers = 1);
+			double Noise1D(double X, unsigned int Octaves = 1, double Persistence = 0.5, double ScalingX = 2.);
 
 			/*!
 			 * \param X The x coordinate of the noise value
 			 * \param Y The y coordinate of the noise value
+			 * \param Octaves The number of octaves of Perlin Noise
+			 * \param Persistence The persistence of the octaves
+			 * \param ScalingX The scaling value for the x coordinate between octaves
+			 * \param ScalingY The scaling value for the y coordinate between octaves
 			 *
 			 * Retrieve a noise value on the two-dimensional plane.
 			 */
-			double Noise2D(double X, double Y, unsigned int Layers = 1);
+			double Noise2D(double X, double Y, unsigned int Octaves = 1, double Persistence = 0.5, double ScalingX = 2., double ScalingY = 2.);
 
 			/*!
 			 * \param NewSeed The new seed of the noise generator

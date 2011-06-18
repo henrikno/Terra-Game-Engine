@@ -66,7 +66,7 @@ namespace terra{
 			/*!
 			 * Destroy the tile.
 			 */
-			~Tile();
+			virtual ~Tile();
 	};
 }
 

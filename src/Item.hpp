@@ -84,7 +84,7 @@ namespace terra{
 			/*!
 			 * Destroy the item.
 			 */
-			~Item();
+			virtual ~Item();
 	};
 }
 

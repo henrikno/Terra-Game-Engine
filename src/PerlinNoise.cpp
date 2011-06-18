@@ -9,16 +9,17 @@ terra::PerlinNoise::PerlinNoise(unsigned int NewSeed){
 
 double terra::PerlinNoise::Interpolate(double A, double B, double X){
 	return (1.-X)*A+X*B;
-	//return ((A-B)*cos(3.14159265358979*X)+A+B)/2.;
 }
 
 double terra::PerlinNoise::GetSmooth(int X){
+	// Do some averaging of values
 	double Center = Rand(X);
 	double Sides = (Rand(X-1)+Rand(X+1))/2.;
 	return (2.*Center+Sides)/3.;
 }
 
 double terra::PerlinNoise::GetSmooth(int X, int Y){
+	// Do some 2D averaging of values
 	double Center = Rand(X, Y);
 	double Sides1 = (Rand(X-1, Y)+Rand(X+1, Y))/2.;
 	double Sides2 = (Rand(X, Y-1)+Rand(X, Y+1))/2.;
@@ -29,22 +30,29 @@ double terra::PerlinNoise::GetSmooth(int X, int Y){
 	return (3.*Center+2.*Sides+Corners)/6.;
 }
 
-double terra::PerlinNoise::Noise1D(double X, unsigned int Layers){
-	if (Layers == 0)
+double terra::PerlinNoise::Noise1D(double X, unsigned int Octaves, double Persistence, double ScalingX){
+	// Exit if there are no octaves to process
+	if (Octaves == 0)
 		return 0.;
+
+	// Fancy math time!
 	int TruncatedX = static_cast<int>(X);
 	double Left = GetSmooth(TruncatedX);
 	double Right = GetSmooth(TruncatedX+1);
-	double Next = 0.5*Noise1D(2.*X, Layers-1);
-	if (Layers > 1)
-		return (Interpolate(Left, Right, X-TruncatedX)+Next)/1.5;
+
+	// Handle multiple octaves
+	if (Octaves > 1)
+		return (Interpolate(Left, Right, X-TruncatedX)+Persistence*Noise1D(ScalingX*X, Octaves-1, Persistence))/(1.+Persistence);
 	else
 		return Interpolate(Left, Right, X-TruncatedX);
 }
 
-double terra::PerlinNoise::Noise2D(double X, double Y, unsigned int Layers){
-	if (Layers == 0)
+double terra::PerlinNoise::Noise2D(double X, double Y, unsigned int Octaves, double Persistence, double ScalingX, double ScalingY){
+	// Exit if there are no octaves to process
+	if (Octaves == 0)
 		return 0.;
+
+	// Fancy math time! Now in 2D!
 	int TruncatedX = static_cast<int>(X);
 	int TruncatedY = static_cast<int>(Y);
 	double TopLeft = GetSmooth(TruncatedX, TruncatedY);
@@ -53,14 +61,16 @@ double terra::PerlinNoise::Noise2D(double X, double Y, unsigned int Layers){
 	double BottomRight = GetSmooth(TruncatedX+1, TruncatedY+1);
 	double Top = Interpolate(TopLeft, TopRight, X-TruncatedX);
 	double Bottom = Interpolate(BottomLeft, BottomRight, X-TruncatedX);
-	double Next = 0.5*Noise2D(2.*X, 2.*Y, Layers-1);
-	if (Layers > 1)
-		return (Interpolate(Top, Bottom, Y-TruncatedY)+Next)/1.5;
+
+	// Handle multiple octaves
+	if (Octaves > 1)
+		return (Interpolate(Top, Bottom, Y-TruncatedY)+Persistence*Noise2D(ScalingX*X, ScalingY*Y, Octaves-1, Persistence))/(1.+Persistence);
 	else
 		return Interpolate(Top, Bottom, Y-TruncatedY);
 }
 
 double terra::PerlinNoise::Rand(int X){
+	// This is just a hash function. Perlin Noise doesn't actually use random numbers, it uses hashes.
 	uint32_t Hash = 0;
 	for (int i = 0; i < 4; ++i){
 		Hash += (X & (0xFF << 8*i)) >> 8*i;
@@ -79,6 +89,7 @@ double terra::PerlinNoise::Rand(int X){
 }
 
 double terra::PerlinNoise::Rand(int X, int Y){
+	// This is just a hash function. Perlin Noise doesn't actually use random numbers, it uses hashes.
 	uint32_t Hash = 0;
 	for (int i = 0; i < 4; ++i){
 		Hash += (X & (0xFF << 8*i)) >> 8*i;

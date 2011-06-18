@@ -5,8 +5,11 @@ terra::Layer::Layer(terra::Item::ItemType StoredType){
 }
 
 void terra::Layer::AddItem(std::shared_ptr<Item> NewItem){
+	// Verify that the item is the right type
 	if (!NewItem || NewItem->GetItemType() != GetStoredType())
 		return;
+
+	// Then store it
 	Items.push_back(NewItem);
 }
 

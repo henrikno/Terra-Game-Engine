@@ -24,8 +24,11 @@ void terra::Tile::OnFrame(){
 }
 
 void terra::Tile::OnRender(sf::RenderTarget &Target){
+	// Abort if the needed texture doesn't exist
 	if (!GetTexture(Tileset))
 		return;
+
+	// Render the tile
 	sf::Sprite RenderMe(*GetTexture(Tileset));
 	RenderMe.SetSubRect(sf::IntRect(sf::Vector2<int>(TilePosition), sf::Vector2<int>(GetSize())));
 	RenderMe.SetPosition(GetPosition());
