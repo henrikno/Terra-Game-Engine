@@ -8,7 +8,7 @@ namespace terra{
 	/*!
 	 * \brief Ogmo Tile
 	 *
-	 * A structure containing information on tiles that has been extracted from the level files.
+	 * A structure containing information on tiles that have been extracted from the level files.
 	 */
 	struct OgmoTile{
 		/*!

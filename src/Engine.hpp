@@ -31,6 +31,11 @@ namespace terra{
 			std::string NextLevelName;
 			sf::RenderWindow Window;
 
+			// Ogmo Level Stuff
+			std::map<std::string, std::string> DefaultLevelValues;
+			std::map<std::string, std::string> LevelValues;
+			std::map<std::string, std::string> ValueTypes;
+
 			// Ogmo Tileset Stuff
 			std::map<std::string, OgmoTileset> OgmoTilesets;
 			std::map<std::string, OgmoTileLayer> OgmoTileLayers;
@@ -77,6 +82,14 @@ namespace terra{
 			 * Retrieve a shared pointer to the layer with the given name.
 			 */
 			std::shared_ptr<Layer> GetLayer(std::string Name);
+
+			/*!
+			 * \param Name The name of the value to retrieve
+			 * \return The value of the value
+			 *
+			 * Retrieve a value from the level.
+			 */
+			std::string GetLevelValue(std::string Name);
 
 			/*!
 			 * \return A reference to the game window

@@ -35,6 +35,14 @@ std::shared_ptr<terra::Layer> terra::Engine::GetLayer(std::string Name){
 	return NamedLayers[Name];
 }
 
+std::string terra::Engine::GetLevelValue(std::string Name){
+	if (LevelValues.find(Name) == LevelValues.end()){
+		Warning(std::string("Level Value of name \"") + Name + "\" does not exist\n");
+		return "";
+	}
+	return LevelValues[Name];
+}
+
 sf::RenderWindow &terra::Engine::GetWindow(){
 	return Window;
 }
@@ -268,6 +276,7 @@ void terra::Engine::ParseLevel(){
 	// Clear out the old level and tell the engine that the level has loaded (or at least tried to)
 	for (auto i = Layers.begin(); i != Layers.end(); ++i)
 		(*i)->Clear();
+	LevelValues = DefaultLevelValues;
 	NewLevel = false;
 
 	// Read in the level file and parse it with RapidXML
@@ -280,6 +289,22 @@ void terra::Engine::ParseLevel(){
 	if (LevelRoot == nullptr || LevelRoot->type() != rapidxml::node_element){
 		Error(std::string("Level file \"") + NextLevelName + "\" has no root node\n");
 		return;
+	}
+
+	// Parse the level's values
+	for (auto i = LevelRoot->first_attribute(); i != nullptr; i = i->next_attribute()){
+		// Get the value properties
+		std::string Name = i->name();
+		std::string Value = i->value();
+
+		// Validate that the value exists
+		if (LevelValues.find(Name) == LevelValues.end()){
+			Warning(std::string("Level value of name \"") + Name + "\" does not exist\n");
+			continue;
+		}
+
+		// Set the value
+		LevelValues[Name] = Value;
 	}
 
 	// Begin parsing the layers that were registered in the project file
@@ -503,6 +528,34 @@ void terra::Engine::ParseProject(){
 	if (ProjectRoot == nullptr || ProjectRoot->type() != rapidxml::node_element){
 		Error("Project file \"res/cfg/Levels.oep\" has no root node\n");
 		return;
+	}
+
+	// Parse default values
+	for (auto ValueContainer = ProjectRoot->first_node("values"); ValueContainer != nullptr; ValueContainer = ValueContainer->next_sibling("values")){
+		// Verify that the value container is valid
+		if (ValueContainer->type() != rapidxml::node_element)
+			continue;
+
+		// Parse all values
+		for (auto Value = ValueContainer->first_node(); Value != nullptr; Value = Value->next_sibling()){
+			// Validate the value
+			if (Value->type() != rapidxml::node_element || (Value->name() != "boolean" && Value->name() != "integer" && Value->name() != "number" && Value->name() != "string" && Value->name() != "text") || Value->first_attribute("name") == nullptr || Value->first_attribute("default") == nullptr)
+				continue;
+
+			// Get the value's properties
+			std::string Name = Value->first_attribute("name")->value();
+			std::string Default = Value->first_attribute("default")->value();
+
+			// Validate that it isn't a duplicate
+			if (DefaultLevelValues.find(Name) != DefaultLevelValues.end()){
+				Warning(std::string("Level value of name \"") + Name + "\" already exists\n");
+				continue;
+			}
+
+			// Add the value to the default values
+			DefaultLevelValues[Name] = Default;
+			ValueTypes[Name] = Value->name();
+		}
 	}
 
 	// Parse everything
