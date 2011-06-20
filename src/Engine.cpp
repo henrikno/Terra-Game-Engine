@@ -346,6 +346,26 @@ void terra::Engine::ParseLevelObjectLayer(rapidxml::xml_node<> *ObjectLayer){
 		if (NewObject.ResizableY && Object->first_attribute("height") != nullptr)
 			NewObject.Size.y = atoi(Object->first_attribute("height")->value());
 
+		// Parse the values of the object
+		for (auto i = Object->first_attribute(); i != nullptr; i = i->next_attribute()){
+			// Skip non-values
+			if (i->name() == "x" || i->name() == "y" || i->name() == "width" || i->name() == "height")
+				continue;
+
+			// Get the properties
+			std::string Name = i->name();
+			std::string Value = i->value();
+
+			// Verify that the value exists
+			if (NewObject.Values.find(Name) == NewObject.Values.end()){
+				Warning(std::string("Value of name \"") + Name + "\" does not exist\n");
+				continue;
+			}
+
+			// Update the value
+			NewObject.Values[Name] = Value;
+		}
+
 		// Validate that the object is registered
 		if (Callbacks.find(NewObject.Name) == Callbacks.end()){
 			Warning(std::string("Object of name\"") + NewObject.Name + "\" is not registered\n");
@@ -477,6 +497,34 @@ void terra::Engine::ParseObjectFolder(rapidxml::xml_node<> *Folder){
 			ResizableY = true;
 		NextObject.ResizableX = ResizableX;
 		NextObject.ResizableY = ResizableY;
+
+		// Parse the default values
+		for (auto ValueContainer = Object->first_node("values"); ValueContainer != nullptr; ValueContainer = ValueContainer->next_sibling("values")){
+			// Verify that the value container is valid
+			if (ValueContainer->type() != rapidxml::node_element)
+				continue;
+
+			// Parse all values
+			for (auto Value = ValueContainer->first_node(); Value != nullptr; Value = Value->next_sibling()){
+				// Validate the value
+				if (Value->type() != rapidxml::node_element || (Value->name() != "boolean" && Value->name() != "integer" && Value->name() != "number" && Value->name() != "string" && Value->name() != "text") || Value->first_attribute("name") == nullptr || Value->first_attribute("default") == nullptr)
+					continue;
+
+				// Get the value's properties
+				std::string Name = Value->first_attribute("name")->value();
+				std::string Default = Value->first_attribute("default")->value();
+
+				// Validate that it isn't a duplicate
+				if (NextObject.Values.find(Name) != NextObject.Values.end()){
+					Warning(std::string("Value of name \"") + Name + "\" already exists\n");
+					continue;
+				}
+
+				// Add the value to the default values
+				NextObject.Values[Name] = Default;
+				NextObject.ValueTypes[Name] = Value->name();
+			}
+		}
 
 		// Make sure the object isn't duplicated
 		if (OgmoObjects.find(NextObject.Name) != OgmoObjects.end()){

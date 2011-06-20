@@ -2,6 +2,7 @@
 #define TERRA_OGMOOBJECT_HPP
 
 #include <SFML/System.hpp>
+#include <map>
 #include <string>
 
 namespace terra{
@@ -15,6 +16,16 @@ namespace terra{
 		 * The name of the object being loaded.
 		 */
 		std::string Name;
+
+		/*!
+		 * The values of the object being loaded.
+		 */
+		std::map<std::string, std::string> Values;
+
+		/*!
+		 * The types of the values in the object.
+		 */
+		std::map<std::string, std::string> ValueTypes;
 
 		/*!
 		 * Is the object resizable on the x axis?
