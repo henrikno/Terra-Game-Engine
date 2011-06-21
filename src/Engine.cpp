@@ -374,6 +374,16 @@ void terra::Engine::ParseLevelObjectLayer(rapidxml::xml_node<> *ObjectLayer){
 			NewObject.Values[Name] = Value;
 		}
 
+		// Parse the object's nodes
+		for (auto i = Object->first_node("node"); i != nullptr; i = i->next_sibling("node")){
+			// Validate the node
+			if (i->type() != rapidxml::node_element || i->first_attribute("x") == nullptr || i->first_attribute("y") == nullptr)
+				continue;
+
+			// Add the node
+			NewObject.Nodes.push_back(atof(sf::Vector2f(i->first_attribute("x")->value()), atof(i->first_attribute("y")->value())));
+		}
+
 		// Validate that the object is registered
 		if (Callbacks.find(NewObject.Name) == Callbacks.end()){
 			Warning(std::string("Object of name\"") + NewObject.Name + "\" is not registered\n");

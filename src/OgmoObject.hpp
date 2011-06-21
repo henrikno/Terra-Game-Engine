@@ -4,6 +4,7 @@
 #include <SFML/System.hpp>
 #include <map>
 #include <string>
+#include <vector>
 
 namespace terra{
 	/*!
@@ -26,6 +27,11 @@ namespace terra{
 		 * The types of the values in the object.
 		 */
 		std::map<std::string, std::string> ValueTypes;
+
+		/*!
+		 * A vector of all of the object's nodes.
+		 */
+		std::vector<sf::Vector2f> Nodes;
 
 		/*!
 		 * Is the object resizable on the x axis?
