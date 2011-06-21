@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <iterator>
 #include "Engine.hpp"
 #include "Utilities.hpp"
 
@@ -173,34 +174,21 @@ std::vector<char> terra::ReadFile(std::string Filename){
 	// Open the file
 	std::ifstream FileStream(Filename);
 
-	// Calculate the length
-	FileStream.seekg(0, std::ios::end);
-	int Length = FileStream.tellg();
-	FileStream.seekg(0, std::ios::beg);
-
-	// Create the buffer and null-terminate it
-	char *Buffer = new char[Length+1];
-	Buffer[Length] = 0;
-
-	// Read the file into the buffer
-	FileStream.read(Buffer, Length);
+	// Copy file contents to a vector
+	FileStream >> std::noskipws;
+	std::vector<char> String;
+	std::copy(std::istream_iterator<char>(FileStream), std::istream_iterator<char>(), std::back_inserter(String));
 
 	// Abort if an error occurred
 	if (!FileStream.good()){
 		terra::Engine::Get().Error(std::string("Unexpected error occured when reading \"") + Filename + "\"\n");
 		FileStream.close();
-		delete[] Buffer;
-		std::vector<char> Empty;
-		Empty.push_back(0);
-		return Empty;
+		String.resize(0);
+		String.push_back(0);
+		return String;
 	}
 
-	// Convert the buffer into a vector, cleanup, and return
 	FileStream.close();
-	std::vector<char> String;
-	for (unsigned int i = 0; i < Length+1; ++i)
-		String.push_back(Buffer[i]);
-	delete[] Buffer;
 	return String;
 }
 
