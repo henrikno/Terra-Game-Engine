@@ -381,7 +381,7 @@ void terra::Engine::ParseLevelObjectLayer(rapidxml::xml_node<> *ObjectLayer){
 				continue;
 
 			// Add the node
-			NewObject.Nodes.push_back(atof(sf::Vector2f(i->first_attribute("x")->value()), atof(i->first_attribute("y")->value())));
+			NewObject.Nodes.push_back(sf::Vector2f(atof(i->first_attribute("x")->value()), atof(i->first_attribute("y")->value())));
 		}
 
 		// Validate that the object is registered
