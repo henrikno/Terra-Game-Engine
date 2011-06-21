@@ -92,6 +92,14 @@ namespace terra{
 			std::string GetLevelValue(std::string Name);
 
 			/*!
+			 * \param Name The name of the value whose type is to be retrieved
+			 * \return The type of the value
+			 *
+			 * Retrieve the type of a value from the level.
+			 */
+			std::string GetLevelValueType(std::string Name);
+
+			/*!
 			 * \return A reference to the game window
 			 *
 			 * Retrieve a reference to the game window.

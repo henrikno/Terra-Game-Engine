@@ -43,6 +43,14 @@ std::string terra::Engine::GetLevelValue(std::string Name){
 	return LevelValues[Name];
 }
 
+std::string terra::Engine::GetLevelValueType(std::string Name){
+	if (ValueTypes.find(Name) == ValueTypes.end()){
+		Warning(std::string("Level Value of name \"") + Name + "\" does not exist\n");
+		return "";
+	}
+	return ValueTypes[Name];
+}
+
 sf::RenderWindow &terra::Engine::GetWindow(){
 	return Window;
 }
